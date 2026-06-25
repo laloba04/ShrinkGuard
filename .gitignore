@@ -1,0 +1,38 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# --- Tests / cobertura ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Modelos y pesos (se descargan solos, no van al repo) ---
+*.pt
+*.onnx
+*.engine
+
+# --- Datos y salidas (pueden contener datos personales: NO subir) ---
+data/
+salidas/
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+!docs/**/*.png   # excepcion: imagenes de documentacion si las hubiera
+
+# --- Entornos / IDE / SO ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

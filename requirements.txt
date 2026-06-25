@@ -1,0 +1,13 @@
+# ShrinkGuard - Fase 1
+# Instalacion: pip install -r requirements.txt
+#
+# Ultralytics arrastra PyTorch. Para CPU normalmente basta con esto; si tienes
+# GPU NVIDIA, instala antes el torch que corresponda a tu CUDA desde
+# https://pytorch.org y luego ejecuta este requirements.
+
+ultralytics>=8.3.0      # YOLO11-pose + tracking (ByteTrack/BoT-SORT)
+opencv-python>=4.9.0    # lectura de video y dibujo de overlays
+numpy>=1.24.0           # geometria del detector
+
+# Solo para desarrollo / tests
+pytest>=8.0.0
