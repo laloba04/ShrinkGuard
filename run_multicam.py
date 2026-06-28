@@ -37,6 +37,8 @@ def main() -> None:
                     help="frames consecutivos para disparar una señal")
     ap.add_argument("--no-posture-filter", action="store_true",
                     help="desactiva el filtro de 'solo personas de pie'")
+    ap.add_argument("--no-smoothing", action="store_true",
+                    help="desactiva el suavizado temporal y el manejo de oclusiones de keypoints")
     ap.add_argument("--names", nargs="+", default=None,
                     help="nombre para cada camara, en el mismo orden que --sources "
                          "(p. ej. Entrada Caja Pasillo)")
@@ -56,6 +58,7 @@ def main() -> None:
         use_mjpg=args.mjpg,
     )
     cfg.concealment.consecutive_frames = args.consecutive
+    cfg.smoothing.enabled = not args.no_smoothing
 
     run_multicam(args.sources, cfg, show=not args.no_window,
                  use_dshow=not args.no_dshow, names=args.names)

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.concealment import ConcealmentConfig
 from src.posture import PostureConfig
+from src.smoothing import SmoothingConfig
 
 
 @dataclass
@@ -30,6 +31,8 @@ class AppConfig:
     concealment: ConcealmentConfig = field(default_factory=ConcealmentConfig)
     # Parametros del filtro de postura (piernas visibles y erguidas).
     posture: PostureConfig = field(default_factory=PostureConfig)
+    # Parametros del suavizado temporal y manejo de oclusiones de keypoints.
+    smoothing: SmoothingConfig = field(default_factory=SmoothingConfig)
     # Si True, solo analiza personas que parecen estar de pie.
     require_standing: bool = True
     # Resolucion de captura (None = dejar el defecto de la camara).

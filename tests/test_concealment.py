@@ -19,6 +19,9 @@ from src.concealment import (  # noqa: E402
     concealment_score,
 )
 from src.posture import PostureConfig, is_standing  # noqa: E402
+from src.smoothing import SmoothingConfig  # noqa: E402
+
+_NO_SMOOTH = SmoothingConfig(enabled=False)
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +187,75 @@ def test_require_standing_false_permite_sentados():
         fired += det.update(f, [(1, kp, conf)])
     assert len(fired) >= 1, \
         "con filtro desactivado, persona sentada deberia poder disparar"
+
+
+# ---------------------------------------------------------------------------
+# Tests de robustez Fase 2: tolerancia a huecos + manejo de oclusiones
+# ---------------------------------------------------------------------------
+
+def test_gap_tolerante_a_hueco_breve():
+    """Un hueco de 1 frame (no near) no reinicia el contador de consecutivos.
+
+    Suavizado desactivado para aislar la politica de max_gap_frames.
+    """
+    cfg = ConcealmentConfig(consecutive_frames=5, max_gap_frames=2)
+    det = ConcealmentDetector(cfg, require_standing=False, smoothing_cfg=_NO_SMOOTH)
+    sus = _person((150, 198))    # mano en cintura -> near
+    fuera = _person((105, 190))  # brazo al costado -> no near
+
+    fired = []
+    for f in range(4):                          # 4 frames near
+        fired += det.update(f, [(1, *sus)])
+    fired += det.update(4, [(1, *fuera)])       # 1 frame de hueco
+    fired += det.update(5, [(1, *sus)])         # vuelve near -> 5o consecutivo
+    assert len(fired) == 1, f"el hueco breve no deberia romper la secuencia, fueron {len(fired)}"
+
+
+def test_sin_tolerancia_el_hueco_reinicia():
+    """Con max_gap_frames=0 un solo frame no-near reinicia el contador."""
+    cfg = ConcealmentConfig(consecutive_frames=5, max_gap_frames=0)
+    det = ConcealmentDetector(cfg, require_standing=False, smoothing_cfg=_NO_SMOOTH)
+    sus = _person((150, 198))
+    fuera = _person((105, 190))
+
+    fired = []
+    for f in range(4):
+        fired += det.update(f, [(1, *sus)])
+    fired += det.update(4, [(1, *fuera)])       # hueco -> reinicia
+    fired += det.update(5, [(1, *sus)])
+    assert fired == [], f"sin tolerancia el hueco deberia reiniciar, fueron {len(fired)}"
+
+
+def test_oclusion_hold_puentea_dropout():
+    """Con suavizado, un frame con keypoints no fiables (oclusion) se puentea:
+    el hold mantiene la ultima pose fiable y la senal no se interrumpe."""
+    cfg = ConcealmentConfig(consecutive_frames=6, max_gap_frames=0)
+    det = ConcealmentDetector(cfg, require_standing=False)  # suavizado on (default)
+    sus = _person((150, 198))
+    drop_kp, drop_conf = _person((150, 198))
+    drop_conf[:] = 0.0                          # dropout total de confianza
+
+    fired = []
+    for f in range(5):
+        fired += det.update(f, [(1, *sus)])
+    fired += det.update(5, [(1, drop_kp, drop_conf)])   # ocluido -> hold puentea
+    assert len(fired) == 1, f"el hold deberia puentear el dropout, fueron {len(fired)}"
+
+
+def test_sin_hold_el_dropout_interrumpe():
+    """Sin suavizado, el mismo dropout reinicia el contador (no hay hold)."""
+    cfg = ConcealmentConfig(consecutive_frames=6, max_gap_frames=0)
+    det = ConcealmentDetector(cfg, require_standing=False, smoothing_cfg=_NO_SMOOTH)
+    sus = _person((150, 198))
+    drop_kp, drop_conf = _person((150, 198))
+    drop_conf[:] = 0.0
+
+    fired = []
+    for f in range(5):
+        fired += det.update(f, [(1, *sus)])
+    fired += det.update(5, [(1, drop_kp, drop_conf)])
+    fired += det.update(6, [(1, *sus)])
+    assert fired == [], f"sin hold el dropout deberia interrumpir, fueron {len(fired)}"
 
 
 # ---------------------------------------------------------------------------

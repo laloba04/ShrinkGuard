@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from src.posture import PostureConfig, is_standing
+from src.smoothing import KeypointSmoother, SmoothingConfig
 
 # Indices de keypoints en formato COCO-17 (el que devuelve YOLO-pose).
 NOSE = 0
@@ -45,6 +46,10 @@ class ConcealmentConfig:
     near_score_threshold: float = 0.45
     # Frames consecutivos con la mano en la cintura para disparar un evento.
     consecutive_frames: int = 8
+    # Tolerancia a huecos: numero de frames SIN deteccion ("no near") que se
+    # toleran sin reiniciar el contador de consecutivos. Absorbe parpadeos del
+    # estimador y oclusiones muy breves que el suavizado no haya podido puentear.
+    max_gap_frames: int = 2
     # Confianza minima del keypoint para fiarnos de el.
     min_keypoint_conf: float = 0.30
     # Tras un evento, frames de enfriamiento antes de volver a disparar para la
@@ -120,6 +125,7 @@ class TrackState:
 
     consecutive: int = 0
     cooldown: int = 0
+    gap: int = 0  # frames consecutivos "no near" desde el ultimo "near"
     history: deque = field(default_factory=lambda: deque(maxlen=64))
 
     def update(self, near: bool, score: float, cfg: ConcealmentConfig) -> bool:
@@ -130,12 +136,19 @@ class TrackState:
 
         if near:
             self.consecutive += 1
+            self.gap = 0
         else:
-            self.consecutive = 0
+            # Un hueco breve no reinicia el contador: solo lo hace cuando se
+            # supera la tolerancia (max_gap_frames). Asi una oclusion de 1-2
+            # frames no rompe una secuencia de ocultacion genuina.
+            self.gap += 1
+            if self.gap > cfg.max_gap_frames:
+                self.consecutive = 0
 
         if self.consecutive >= cfg.consecutive_frames and self.cooldown == 0:
             self.cooldown = cfg.cooldown_frames
             self.consecutive = 0
+            self.gap = 0
             return True
         return False
 
@@ -145,10 +158,12 @@ class ConcealmentDetector:
 
     def __init__(self, cfg: ConcealmentConfig | None = None,
                  posture_cfg: PostureConfig | None = None,
-                 require_standing: bool = True) -> None:
+                 require_standing: bool = True,
+                 smoothing_cfg: SmoothingConfig | None = None) -> None:
         self.cfg = cfg or ConcealmentConfig()
         self.posture_cfg = posture_cfg or PostureConfig()
         self.require_standing = require_standing
+        self._smoother = KeypointSmoother(smoothing_cfg)
         self._states: dict[int, TrackState] = {}
 
     def update(self, frame_idx: int,
@@ -162,6 +177,8 @@ class ConcealmentDetector:
         events: list[ConcealmentEvent] = []
         for track_id, kp, conf in people:
             seen.add(track_id)
+            # Suavizado temporal + manejo de oclusiones antes de puntuar.
+            kp, conf = self._smoother.apply(track_id, kp, conf)
             state = self._states.setdefault(track_id, TrackState())
             state.history = deque(state.history, maxlen=self.cfg.history_len)
             score = concealment_score(kp, conf, self.cfg)
@@ -177,6 +194,7 @@ class ConcealmentDetector:
         # Limpiar tracks que ya no estan en escena (libera memoria).
         for gone in set(self._states) - seen:
             del self._states[gone]
+            self._smoother.drop(gone)
         return events
 
     def current_score(self, track_id: int) -> float:

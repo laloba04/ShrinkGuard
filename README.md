@@ -22,6 +22,22 @@ nunca decisiones automáticas sobre personas.
 La heurística es deliberadamente sustituible por un clasificador aprendido
 (LSTM / ST-GCN) en la Fase 3 sin tocar el resto del pipeline.
 
+## Robustez (Fase 2)
+
+Antes de puntuar, los keypoints pasan por un suavizado temporal que reduce el
+ruido del estimador de pose y tolera oclusiones:
+
+- **Media móvil ponderada por confianza** por persona y keypoint → menos *jitter*.
+- **Manejo de oclusiones**: si un keypoint deja de ser fiable, se mantiene su
+  último valor durante unos frames con la confianza decayendo; si la oclusión se
+  prolonga, se da por ausente.
+- **Tolerancia a huecos** (`max_gap_frames`): un parpadeo breve sin detección no
+  reinicia el contador de frames consecutivos, así una secuencia genuina no se
+  rompe por un fallo puntual.
+
+Se desactiva con `--no-smoothing`. Vive en `src/smoothing.py` (solo `numpy`,
+testeable sin modelos ni vídeo).
+
 ## Arquitectura
 
 ```mermaid
@@ -45,6 +61,7 @@ shrinkguard/
 │   ├── config.py           # parámetros del pipeline
 │   ├── pose.py             # YOLO11-pose + tracking  (única dependencia de Ultralytics)
 │   ├── concealment.py      # heurística + estado temporal  (solo numpy, testeable)
+│   ├── smoothing.py        # suavizado temporal + oclusiones  (solo numpy, testeable)
 │   ├── visualizer.py       # overlays con OpenCV
 │   └── pipeline.py         # bucle principal
 └── tests/

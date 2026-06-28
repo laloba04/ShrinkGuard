@@ -108,6 +108,7 @@ class CameraWorker(threading.Thread):
             self.cfg.concealment,
             posture_cfg=self.cfg.posture,
             require_standing=self.cfg.require_standing,
+            smoothing_cfg=self.cfg.smoothing,
         )
         # Apertura SERIALIZADA: DirectShow (y algunos backends) fallan si dos
         # camaras se inicializan a la vez. Solo un hilo abre cada vez; "calentar"

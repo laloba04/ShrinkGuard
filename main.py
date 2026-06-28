@@ -29,6 +29,8 @@ def main() -> None:
                     help="frames consecutivos para disparar una señal")
     ap.add_argument("--no-posture-filter", action="store_true",
                     help="desactiva el filtro de postura (analiza tambien a personas sentadas)")
+    ap.add_argument("--no-smoothing", action="store_true",
+                    help="desactiva el suavizado temporal y el manejo de oclusiones de keypoints")
     ap.add_argument("--dshow", action="store_true",
                     help="usa backend DirectShow (Windows, mas estable en camaras USB)")
     ap.add_argument("--label", default=None,
@@ -52,6 +54,7 @@ def main() -> None:
         cam_label=args.label,
     )
     cfg.concealment.consecutive_frames = args.consecutive
+    cfg.smoothing.enabled = not args.no_smoothing
     run(args.source, cfg, dshow=args.dshow)
 
 

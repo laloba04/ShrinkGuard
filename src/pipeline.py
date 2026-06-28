@@ -69,6 +69,7 @@ def run(source: str, cfg: AppConfig, dshow: bool = False) -> None:
         cfg.concealment,
         posture_cfg=cfg.posture,
         require_standing=cfg.require_standing,
+        smoothing_cfg=cfg.smoothing,
     )
     cap = _open_source(source, cfg, dshow=dshow)
 
