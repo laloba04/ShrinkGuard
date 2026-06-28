@@ -38,6 +38,20 @@ ruido del estimador de pose y tolera oclusiones:
 Se desactiva con `--no-smoothing`. Vive en `src/smoothing.py` (solo `numpy`,
 testeable sin modelos ni vídeo).
 
+### Zonas de interés (ROI)
+
+Se puede limitar el análisis a un área concreta del frame (p. ej. una zona de
+estanterías), ignorando a quien esté fuera. La ROI es un polígono en
+coordenadas **normalizadas [0,1]**, así que vale para cualquier resolución:
+
+```bash
+# Analizar solo la mitad inferior central del encuadre
+python main.py --source 0 --roi 0.1,0.4 0.9,0.4 0.9,0.95 0.1,0.95
+```
+
+La ROI se dibuja en ámbar sobre el vídeo. Vive en `src/roi.py` (geometría pura
+`numpy`, testeable). En multicámara, `--roi` aplica la misma zona a todas.
+
 ## Arquitectura
 
 ```mermaid
@@ -62,6 +76,7 @@ shrinkguard/
 │   ├── pose.py             # YOLO11-pose + tracking  (única dependencia de Ultralytics)
 │   ├── concealment.py      # heurística + estado temporal  (solo numpy, testeable)
 │   ├── smoothing.py        # suavizado temporal + oclusiones  (solo numpy, testeable)
+│   ├── roi.py              # zonas de interés  (solo numpy, testeable)
 │   ├── visualizer.py       # overlays con OpenCV
 │   └── pipeline.py         # bucle principal
 └── tests/

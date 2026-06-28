@@ -13,6 +13,7 @@ from pathlib import Path
 
 from src.config import AppConfig
 from src.pipeline import run
+from src.roi import parse_roi_arg
 
 
 def main() -> None:
@@ -31,6 +32,10 @@ def main() -> None:
                     help="desactiva el filtro de postura (analiza tambien a personas sentadas)")
     ap.add_argument("--no-smoothing", action="store_true",
                     help="desactiva el suavizado temporal y el manejo de oclusiones de keypoints")
+    ap.add_argument("--roi", nargs="+", default=None, metavar="X,Y",
+                    help="poligono de zona de interes en coords normalizadas [0,1], "
+                         "p. ej. --roi 0.1,0.2 0.9,0.2 0.9,0.95 0.1,0.95 "
+                         "(solo se analiza a quien este dentro)")
     ap.add_argument("--dshow", action="store_true",
                     help="usa backend DirectShow (Windows, mas estable en camaras USB)")
     ap.add_argument("--label", default=None,
@@ -55,6 +60,9 @@ def main() -> None:
     )
     cfg.concealment.consecutive_frames = args.consecutive
     cfg.smoothing.enabled = not args.no_smoothing
+    if args.roi:
+        cfg.roi.polygon = parse_roi_arg(args.roi)
+        cfg.roi.enabled = True
     run(args.source, cfg, dshow=args.dshow)
 
 

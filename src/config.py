@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.concealment import ConcealmentConfig
 from src.posture import PostureConfig
+from src.roi import ROIConfig
 from src.smoothing import SmoothingConfig
 
 
@@ -33,6 +34,8 @@ class AppConfig:
     posture: PostureConfig = field(default_factory=PostureConfig)
     # Parametros del suavizado temporal y manejo de oclusiones de keypoints.
     smoothing: SmoothingConfig = field(default_factory=SmoothingConfig)
+    # Zona de interes: si esta activa, solo se analiza a quien este dentro.
+    roi: ROIConfig = field(default_factory=ROIConfig)
     # Si True, solo analiza personas que parecen estar de pie.
     require_standing: bool = True
     # Resolucion de captura (None = dejar el defecto de la camara).

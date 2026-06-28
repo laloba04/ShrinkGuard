@@ -20,6 +20,7 @@ from src.concealment import (  # noqa: E402
 )
 from src.posture import PostureConfig, is_standing  # noqa: E402
 from src.smoothing import SmoothingConfig  # noqa: E402
+from src.roi import ROIConfig  # noqa: E402
 
 _NO_SMOOTH = SmoothingConfig(enabled=False)
 
@@ -256,6 +257,39 @@ def test_sin_hold_el_dropout_interrumpe():
     fired += det.update(5, [(1, drop_kp, drop_conf)])
     fired += det.update(6, [(1, *sus)])
     assert fired == [], f"sin hold el dropout deberia interrumpir, fueron {len(fired)}"
+
+
+# ---------------------------------------------------------------------------
+# Tests de integracion de la ROI en el detector
+# ---------------------------------------------------------------------------
+
+def test_roi_excluye_persona_fuera():
+    """Con ROI activa, una persona fuera del area no dispara aunque tenga la
+    mano en la cinturilla. _person tiene las caderas en x~150; con un frame de
+    640 px de ancho cae en la mitad izquierda, asi que una ROI en la mitad
+    DERECHA la deja fuera."""
+    roi = ROIConfig(enabled=True,
+                    polygon=[(0.5, 0.0), (1.0, 0.0), (1.0, 1.0), (0.5, 1.0)])
+    det = ConcealmentDetector(ConcealmentConfig(consecutive_frames=3),
+                              require_standing=False, roi_cfg=roi)
+    kp, conf = _person((150, 198))
+    fired = []
+    for f in range(6):
+        fired += det.update(f, [(1, kp, conf)], frame_wh=(640, 480))
+    assert fired == [], f"persona fuera de la ROI no deberia disparar, fueron {len(fired)}"
+
+
+def test_roi_incluye_persona_dentro():
+    """La misma persona con una ROI en la mitad IZQUIERDA cae dentro y dispara."""
+    roi = ROIConfig(enabled=True,
+                    polygon=[(0.0, 0.0), (0.5, 0.0), (0.5, 1.0), (0.0, 1.0)])
+    det = ConcealmentDetector(ConcealmentConfig(consecutive_frames=3),
+                              require_standing=False, roi_cfg=roi)
+    kp, conf = _person((150, 198))
+    fired = []
+    for f in range(6):
+        fired += det.update(f, [(1, kp, conf)], frame_wh=(640, 480))
+    assert len(fired) >= 1, "persona dentro de la ROI deberia disparar"
 
 
 # ---------------------------------------------------------------------------

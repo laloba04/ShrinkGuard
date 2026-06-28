@@ -17,6 +17,7 @@ import argparse
 
 from src.config import AppConfig
 from src.multicam import run_multicam
+from src.roi import parse_roi_arg
 
 
 def main() -> None:
@@ -39,6 +40,10 @@ def main() -> None:
                     help="desactiva el filtro de 'solo personas de pie'")
     ap.add_argument("--no-smoothing", action="store_true",
                     help="desactiva el suavizado temporal y el manejo de oclusiones de keypoints")
+    ap.add_argument("--roi", nargs="+", default=None, metavar="X,Y",
+                    help="poligono de zona de interes en coords normalizadas [0,1] "
+                         "(misma ROI para todas las camaras), p. ej. "
+                         "--roi 0.1,0.2 0.9,0.2 0.9,0.95 0.1,0.95")
     ap.add_argument("--names", nargs="+", default=None,
                     help="nombre para cada camara, en el mismo orden que --sources "
                          "(p. ej. Entrada Caja Pasillo)")
@@ -59,6 +64,9 @@ def main() -> None:
     )
     cfg.concealment.consecutive_frames = args.consecutive
     cfg.smoothing.enabled = not args.no_smoothing
+    if args.roi:
+        cfg.roi.polygon = parse_roi_arg(args.roi)
+        cfg.roi.enabled = True
 
     run_multicam(args.sources, cfg, show=not args.no_window,
                  use_dshow=not args.no_dshow, names=args.names)

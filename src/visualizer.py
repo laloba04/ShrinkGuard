@@ -59,3 +59,14 @@ def draw_footer(frame: np.ndarray) -> None:
     txt = "Senal automatica, NO acusacion. Decision: persona."
     cv2.putText(frame, txt, (10, h - 12),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, WHITE, 1)
+
+
+def draw_roi(frame: np.ndarray, polygon) -> None:
+    """Dibuja el poligono de la ROI (coordenadas normalizadas [0,1])."""
+    if not polygon or len(polygon) < 3:
+        return
+    h, w = frame.shape[:2]
+    pts = np.array([(int(x * w), int(y * h)) for x, y in polygon], dtype=np.int32)
+    cv2.polylines(frame, [pts], isClosed=True, color=AMBER, thickness=2)
+    cv2.putText(frame, "ROI", (int(pts[0][0]), max(12, int(pts[0][1]) - 6)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, AMBER, 2)

@@ -22,6 +22,7 @@ from src.visualizer import (
     draw_alert_banner,
     draw_footer,
     draw_person,
+    draw_roi,
 )
 
 
@@ -70,6 +71,7 @@ def run(source: str, cfg: AppConfig, dshow: bool = False) -> None:
         posture_cfg=cfg.posture,
         require_standing=cfg.require_standing,
         smoothing_cfg=cfg.smoothing,
+        roi_cfg=cfg.roi,
     )
     cap = _open_source(source, cfg, dshow=dshow)
 
@@ -92,8 +94,11 @@ def run(source: str, cfg: AppConfig, dshow: bool = False) -> None:
 
             people = estimator.track(frame)
             payload = [(p.track_id, p.keypoints, p.conf) for p in people]
-            events = detector.update(frame_idx, payload)
+            h, w = frame.shape[:2]
+            events = detector.update(frame_idx, payload, frame_wh=(w, h))
 
+            if cfg.roi.enabled:
+                draw_roi(frame, cfg.roi.polygon)
             for p in people:
                 draw_person(frame, p, detector.current_score(p.track_id),
                             cfg.concealment.min_keypoint_conf)

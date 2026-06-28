@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from src.posture import PostureConfig, is_standing
+from src.roi import ROIConfig, in_roi
 from src.smoothing import KeypointSmoother, SmoothingConfig
 
 # Indices de keypoints en formato COCO-17 (el que devuelve YOLO-pose).
@@ -159,17 +160,23 @@ class ConcealmentDetector:
     def __init__(self, cfg: ConcealmentConfig | None = None,
                  posture_cfg: PostureConfig | None = None,
                  require_standing: bool = True,
-                 smoothing_cfg: SmoothingConfig | None = None) -> None:
+                 smoothing_cfg: SmoothingConfig | None = None,
+                 roi_cfg: ROIConfig | None = None) -> None:
         self.cfg = cfg or ConcealmentConfig()
         self.posture_cfg = posture_cfg or PostureConfig()
         self.require_standing = require_standing
+        self.roi_cfg = roi_cfg or ROIConfig()
         self._smoother = KeypointSmoother(smoothing_cfg)
         self._states: dict[int, TrackState] = {}
 
     def update(self, frame_idx: int,
-               people: list[tuple[int, np.ndarray, np.ndarray]]
+               people: list[tuple[int, np.ndarray, np.ndarray]],
+               frame_wh: tuple[int, int] | None = None
                ) -> list[ConcealmentEvent]:
         """people: lista de (track_id, keypoints(17,2), conf(17,)).
+
+        frame_wh: (ancho, alto) del frame en pixeles, necesario solo si la ROI
+        esta activa (para normalizar la posicion de la persona).
 
         Devuelve la lista de eventos disparados en este frame.
         """
@@ -183,6 +190,11 @@ class ConcealmentDetector:
             state.history = deque(state.history, maxlen=self.cfg.history_len)
             score = concealment_score(kp, conf, self.cfg)
             near = score >= self.cfg.near_score_threshold
+            # Zona de interes: si la persona esta fuera de la ROI, no la
+            # analizamos (no acumulamos). Requiere conocer el tamaño del frame.
+            if (self.roi_cfg.enabled and frame_wh is not None
+                    and not in_roi(kp, conf, frame_wh[0], frame_wh[1], self.roi_cfg)):
+                near = False
             # Filtro de postura: en una tienda solo nos interesan personas de
             # pie. Si no se confirma postura erguida, no acumulamos (esto mata
             # los falsos positivos de gente sentada / sin piernas en plano).
