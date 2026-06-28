@@ -37,7 +37,14 @@ def main() -> None:
                     help="frames consecutivos para disparar una señal")
     ap.add_argument("--no-posture-filter", action="store_true",
                     help="desactiva el filtro de 'solo personas de pie'")
+    ap.add_argument("--names", nargs="+", default=None,
+                    help="nombre para cada camara, en el mismo orden que --sources "
+                         "(p. ej. Entrada Caja Pasillo)")
     args = ap.parse_args()
+
+    if args.names and len(args.names) != len(args.sources):
+        ap.error(f"--names necesita el mismo numero de valores que --sources "
+                 f"({len(args.sources)} fuentes, {len(args.names)} nombres)")
 
     cfg = AppConfig(
         model_name=args.model,
@@ -51,7 +58,7 @@ def main() -> None:
     cfg.concealment.consecutive_frames = args.consecutive
 
     run_multicam(args.sources, cfg, show=not args.no_window,
-                 use_dshow=not args.no_dshow)
+                 use_dshow=not args.no_dshow, names=args.names)
 
 
 if __name__ == "__main__":

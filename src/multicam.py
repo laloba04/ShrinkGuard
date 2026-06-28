@@ -63,7 +63,8 @@ def _safe_name(source: str, idx: int) -> str:
 class CameraWorker(threading.Thread):
     def __init__(self, idx: int, source: str, cfg: AppConfig,
                  stop_event: threading.Event, use_dshow: bool,
-                 open_lock: threading.Lock) -> None:
+                 open_lock: threading.Lock,
+                 name: str | None = None) -> None:
         super().__init__(daemon=True)
         self.idx = idx
         self.source = source
@@ -71,7 +72,7 @@ class CameraWorker(threading.Thread):
         self.stop_event = stop_event
         self.use_dshow = use_dshow
         self.open_lock = open_lock
-        self.name_tag = _safe_name(source, idx)
+        self.name_tag = name if name else _safe_name(source, idx)
         self.window_title = f"ShrinkGuard - {self.name_tag}"
         self.review_dir = cfg.review_dir / self.name_tag
 
@@ -176,10 +177,11 @@ class CameraWorker(threading.Thread):
 
 
 def run_multicam(sources: list[str], cfg: AppConfig, show: bool,
-                 use_dshow: bool) -> None:
+                 use_dshow: bool, names: list[str] | None = None) -> None:
     stop = threading.Event()
     open_lock = threading.Lock()  # serializa la apertura de camaras
-    workers = [CameraWorker(i, s, cfg, stop, use_dshow, open_lock)
+    workers = [CameraWorker(i, s, cfg, stop, use_dshow, open_lock,
+                            name=names[i] if names else None)
                for i, s in enumerate(sources)]
     for w in workers:
         w.start()
