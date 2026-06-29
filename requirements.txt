@@ -8,6 +8,7 @@
 ultralytics>=8.3.0      # YOLO11-pose + tracking (ByteTrack/BoT-SORT)
 opencv-python>=4.9.0    # lectura de video y dibujo de overlays
 numpy>=1.24.0           # geometria del detector
+torch>=2.0.0            # clasificador temporal de la Fase 3 (PoseLSTM)
 
 # Solo para desarrollo / tests
 pytest>=8.0.0

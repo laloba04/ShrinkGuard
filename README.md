@@ -67,6 +67,28 @@ de métricas vive en `src/evaluation.py` (pura, testeable). Cómo conseguir y
 etiquetar los clips (y la nota ética sobre datos personales): ver
 [`DATOS.md`](DATOS.md).
 
+## Clasificador aprendido (Fase 3)
+
+La heurística geométrica tiene techo: depende de reglas fijas y se degrada con el
+ángulo de cámara. La Fase 3 la sustituye por un **clasificador temporal que
+aprende el gesto** a partir de secuencias de pose normalizada (LSTM).
+
+```bash
+# 1) Preparar dataset (pose -> ventanas etiquetadas) por cada dataset
+python tools/preparar_dataset.py --videos-dir "datos/clips/<dataset>" \
+    --labels datos/labels.csv --out datos/ds.npz --device 0
+# 2) Entrenar (división por vídeo, sin fuga de datos)
+python tools/entrenar.py --data datos/ds_*.npz --out modelos/poselstm.pt --device 0
+# 3) Usar el modelo en vivo (en vez de la heurística)
+python main.py --source 0 --modelo modelos/poselstm.pt
+```
+
+`LearnedConcealmentDetector` tiene la **misma interfaz** que el detector
+heurístico, así que es intercambiable sin tocar el pipeline. PyTorch queda
+aislado en `src/classifier.py` (como Ultralytics en `pose.py`). Sobre los datos
+de validación, el clasificador **supera a la heurística** (F1 0.89 vs 0.82); ver
+[`RESULTADOS.md`](RESULTADOS.md).
+
 ## Arquitectura
 
 ```mermaid
@@ -93,6 +115,8 @@ shrinkguard/
 │   ├── smoothing.py        # suavizado temporal + oclusiones  (solo numpy, testeable)
 │   ├── roi.py              # zonas de interés  (solo numpy, testeable)
 │   ├── evaluation.py       # métricas precision/recall  (pura, testeable)
+│   ├── sequence.py         # features de pose normalizadas + ventanas  (numpy, testeable)
+│   ├── classifier.py       # PoseLSTM + detector aprendido  (única dependencia de PyTorch)
 │   ├── visualizer.py       # overlays con OpenCV
 │   └── pipeline.py         # bucle principal
 └── tests/

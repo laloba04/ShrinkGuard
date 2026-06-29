@@ -26,8 +26,8 @@ from pathlib import Path
 
 import cv2
 
-from src.concealment import ConcealmentDetector
 from src.config import AppConfig
+from src.pipeline import build_detector
 from src.pose import PoseEstimator
 from src.visualizer import draw_alert_banner, draw_footer, draw_person, draw_roi
 
@@ -104,13 +104,7 @@ class CameraWorker(threading.Thread):
                              "score", "recorte"])
 
         estimator = PoseEstimator(self.cfg)  # modelo propio -> tracking propio
-        detector = ConcealmentDetector(
-            self.cfg.concealment,
-            posture_cfg=self.cfg.posture,
-            require_standing=self.cfg.require_standing,
-            smoothing_cfg=self.cfg.smoothing,
-            roi_cfg=self.cfg.roi,
-        )
+        detector = build_detector(self.cfg)  # heuristica o clasificador aprendido
         # Apertura SERIALIZADA: DirectShow (y algunos backends) fallan si dos
         # camaras se inicializan a la vez. Solo un hilo abre cada vez; "calentar"
         # la camara dentro del lock fuerza a que el grafo termine de montarse

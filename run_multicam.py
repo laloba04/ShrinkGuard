@@ -14,6 +14,7 @@ Ejemplos:
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from src.config import AppConfig
 from src.multicam import run_multicam
@@ -44,6 +45,11 @@ def main() -> None:
                     help="poligono de zona de interes en coords normalizadas [0,1] "
                          "(misma ROI para todas las camaras), p. ej. "
                          "--roi 0.1,0.2 0.9,0.2 0.9,0.95 0.1,0.95")
+    ap.add_argument("--modelo", default=None,
+                    help="ruta a un modelo PoseLSTM (Fase 3): usa el clasificador "
+                         "aprendido en vez de la heuristica")
+    ap.add_argument("--umbral-modelo", type=float, default=0.8,
+                    help="umbral de probabilidad del clasificador aprendido")
     ap.add_argument("--names", nargs="+", default=None,
                     help="nombre para cada camara, en el mismo orden que --sources "
                          "(p. ej. Entrada Caja Pasillo)")
@@ -64,6 +70,9 @@ def main() -> None:
     )
     cfg.concealment.consecutive_frames = args.consecutive
     cfg.smoothing.enabled = not args.no_smoothing
+    if args.modelo:
+        cfg.model_path = Path(args.modelo)
+        cfg.model_threshold = args.umbral_modelo
     if args.roi:
         cfg.roi.polygon = parse_roi_arg(args.roi)
         cfg.roi.enabled = True

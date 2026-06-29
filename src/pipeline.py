@@ -26,6 +26,23 @@ from src.visualizer import (
 )
 
 
+def build_detector(cfg: AppConfig):
+    """Crea el detector segun la config: clasificador aprendido (Fase 3) si hay
+    model_path, o la heuristica geometrica en caso contrario. Ambos comparten
+    interfaz, asi que el resto del pipeline no cambia."""
+    if cfg.model_path is not None:
+        from src.classifier import LearnedConcealmentDetector
+        if cfg.roi.enabled:
+            print("[aviso] el clasificador aprendido no aplica la ROI (--roi se ignora).")
+        dev = f"cuda:{cfg.device}" if str(cfg.device).isdigit() else cfg.device
+        return LearnedConcealmentDetector(str(cfg.model_path), cfg=cfg.concealment,
+                                          threshold=cfg.model_threshold, device=dev,
+                                          smoothing_cfg=cfg.smoothing)
+    return ConcealmentDetector(cfg.concealment, posture_cfg=cfg.posture,
+                               require_standing=cfg.require_standing,
+                               smoothing_cfg=cfg.smoothing, roi_cfg=cfg.roi)
+
+
 def _open_source(source: str, cfg: AppConfig, dshow: bool = False) -> cv2.VideoCapture:
     """Abre la fuente de video.
 
@@ -66,13 +83,7 @@ def run(source: str, cfg: AppConfig, dshow: bool = False) -> None:
                          "score", "recorte"])
 
     estimator = PoseEstimator(cfg)
-    detector = ConcealmentDetector(
-        cfg.concealment,
-        posture_cfg=cfg.posture,
-        require_standing=cfg.require_standing,
-        smoothing_cfg=cfg.smoothing,
-        roi_cfg=cfg.roi,
-    )
+    detector = build_detector(cfg)
     cap = _open_source(source, cfg, dshow=dshow)
 
     writer_video = None

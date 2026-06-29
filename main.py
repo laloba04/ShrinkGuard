@@ -36,6 +36,11 @@ def main() -> None:
                     help="poligono de zona de interes en coords normalizadas [0,1], "
                          "p. ej. --roi 0.1,0.2 0.9,0.2 0.9,0.95 0.1,0.95 "
                          "(solo se analiza a quien este dentro)")
+    ap.add_argument("--modelo", default=None,
+                    help="ruta a un modelo PoseLSTM (Fase 3): usa el clasificador "
+                         "aprendido en vez de la heuristica geometrica")
+    ap.add_argument("--umbral-modelo", type=float, default=0.8,
+                    help="umbral de probabilidad del clasificador aprendido")
     ap.add_argument("--dshow", action="store_true",
                     help="usa backend DirectShow (Windows, mas estable en camaras USB)")
     ap.add_argument("--label", default=None,
@@ -60,6 +65,9 @@ def main() -> None:
     )
     cfg.concealment.consecutive_frames = args.consecutive
     cfg.smoothing.enabled = not args.no_smoothing
+    if args.modelo:
+        cfg.model_path = Path(args.modelo)
+        cfg.model_threshold = args.umbral_modelo
     if args.roi:
         cfg.roi.polygon = parse_roi_arg(args.roi)
         cfg.roi.enabled = True

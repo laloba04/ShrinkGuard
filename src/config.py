@@ -36,6 +36,11 @@ class AppConfig:
     smoothing: SmoothingConfig = field(default_factory=SmoothingConfig)
     # Zona de interes: si esta activa, solo se analiza a quien este dentro.
     roi: ROIConfig = field(default_factory=ROIConfig)
+    # Clasificador aprendido (Fase 3): si se da una ruta de modelo PoseLSTM, el
+    # pipeline usa el detector aprendido en vez de la heuristica geometrica.
+    model_path: Path | None = None
+    # Umbral de probabilidad del clasificador aprendido.
+    model_threshold: float = 0.8
     # Si True, solo analiza personas que parecen estar de pie.
     require_standing: bool = True
     # Resolucion de captura (None = dejar el defecto de la camara).
