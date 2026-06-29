@@ -84,6 +84,14 @@ def test_mano_en_cinturilla_da_score_alto():
     assert s > 0.8, f"esperaba score alto, fue {s}"
 
 
+def test_mano_en_pecho_da_score_alto():
+    # Ocultacion ALTA (meter algo en la chaqueta): muñeca a la altura del pecho,
+    # centrada. Con _person el ancla de pecho cae en y~145.
+    kp, conf = _person((150, 145))
+    s = concealment_score(kp, conf, ConcealmentConfig())
+    assert s > 0.8, f"esperaba score alto para mano en el pecho, fue {s}"
+
+
 def test_brazo_al_costado_no_dispara():
     kp, conf = _person((105, 190))   # muñeca fuera de la columna del torso
     s = concealment_score(kp, conf, ConcealmentConfig())

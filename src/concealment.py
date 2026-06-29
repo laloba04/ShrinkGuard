@@ -34,12 +34,17 @@ class ConcealmentConfig:
     normalizados por el tamaño del torso, por lo que funcionan a distintas
     distancias de la camara sin recalibrar."""
 
-    # Distancia muñeca->cintura (normalizada por la longitud del torso) por
-    # debajo de la cual consideramos que la mano esta "en la cintura".
+    # Distancia muñeca->ancla (normalizada por la longitud del torso) por
+    # debajo de la cual consideramos que la mano esta "ocultando" contra el
+    # cuerpo. Se mide a la cinturilla Y al pecho (ver chest_anchor_ratio).
     near_ratio: float = 0.40
-    # Margen horizontal (fraccion del ancho de cadera) para considerar que la
+    # Posicion del ancla "pecho/chaqueta" como fraccion del torso desde los
+    # hombros (0=hombros, 1=caderas). Captura la ocultacion ALTA (meter algo en
+    # la chaqueta), que la sola ancla de cadera no detecta. ~0.45 = pecho bajo.
+    chest_anchor_ratio: float = 0.45
+    # Margen horizontal (fraccion del ancho del cuerpo) para considerar que la
     # muñeca esta DELANTE del cuerpo y no simplemente con el brazo caido al
-    # costado. Esto es lo que distingue "rebuscar en la cinturilla" de "brazo
+    # costado. Esto es lo que distingue "ocultar contra el cuerpo" de "brazo
     # relajado al lado".
     column_margin_ratio: float = 0.25
     # Score minimo para que un frame cuente como "mano en la cintura". Sube
@@ -79,7 +84,13 @@ def _dist(a: np.ndarray, b: np.ndarray) -> float:
 
 def concealment_score(keypoints: np.ndarray, conf: np.ndarray,
                       cfg: ConcealmentConfig) -> float:
-    """Devuelve un score 0..1 de "mano en la cinturilla / ocultacion".
+    """Devuelve un score 0..1 de "mano ocultando contra el cuerpo".
+
+    Mide la cercania de cada muñeca a dos anclas a lo largo del torso: la
+    cinturilla (caderas) y el pecho/chaqueta (chest_anchor_ratio). Con ambas se
+    cubre tanto la ocultacion BAJA (cinturilla/bolsillo) como la ALTA (meter
+    algo en la chaqueta). La muñeca debe estar DELANTE del cuerpo (dentro de la
+    columna del torso) para no confundir un brazo caido al costado.
 
     keypoints: array (17, 2) con coordenadas (x, y) en pixeles.
     conf:      array (17,) con la confianza de cada keypoint.
@@ -98,10 +109,17 @@ def concealment_score(keypoints: np.ndarray, conf: np.ndarray,
     if torso <= 1e-6:
         return 0.0
 
-    hip_x = sorted([keypoints[L_HIP][0], keypoints[R_HIP][0]])
-    hip_width = max(hip_x[1] - hip_x[0], 1e-6)
-    margin = cfg.column_margin_ratio * hip_width
-    col_min, col_max = hip_x[0] - margin, hip_x[1] + margin
+    # Columna del cuerpo: union del ancho de hombros y caderas (asi la mano a la
+    # altura del pecho tambien cuenta como "delante del cuerpo").
+    xs = [keypoints[L_SHOULDER][0], keypoints[R_SHOULDER][0],
+          keypoints[L_HIP][0], keypoints[R_HIP][0]]
+    body_width = max(max(xs) - min(xs), 1e-6)
+    margin = cfg.column_margin_ratio * body_width
+    col_min, col_max = min(xs) - margin, max(xs) + margin
+
+    # Anclas de ocultacion a lo largo del torso: cinturilla y pecho.
+    chest = shoulder_mid + cfg.chest_anchor_ratio * (hip_mid - shoulder_mid)
+    anchors = (hip_mid, chest)
 
     best = 0.0
     for wrist_idx in (L_WRIST, R_WRIST):
@@ -111,12 +129,12 @@ def concealment_score(keypoints: np.ndarray, conf: np.ndarray,
         # ¿Esta la muñeca DELANTE del cuerpo (dentro de la columna del torso)?
         if not (col_min <= wrist[0] <= col_max):
             continue
-        d = _dist(wrist, hip_mid) / torso
-        if d >= cfg.near_ratio:
-            continue
-        # Mapear distancia a score: cerca de la cintura -> score alto.
-        score = 1.0 - (d / cfg.near_ratio)
-        best = max(best, score)
+        for anchor in anchors:
+            d = _dist(wrist, anchor) / torso
+            if d >= cfg.near_ratio:
+                continue
+            # Mapear distancia a score: cerca del ancla -> score alto.
+            best = max(best, 1.0 - (d / cfg.near_ratio))
     return best
 
 
