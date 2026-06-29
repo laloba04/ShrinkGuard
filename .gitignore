@@ -21,7 +21,9 @@ htmlcov/
 *.engine
 
 # --- Datos y salidas (pueden contener datos personales: NO subir) ---
+# (clips de evaluacion + labels locales; el formato esta en DATOS.md)
 data/
+datos/
 salidas/
 *.mp4
 *.avi

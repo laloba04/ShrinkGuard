@@ -52,6 +52,21 @@ python main.py --source 0 --roi 0.1,0.4 0.9,0.4 0.9,0.95 0.1,0.95
 La ROI se dibuja en ámbar sobre el vídeo. Vive en `src/roi.py` (geometría pura
 `numpy`, testeable). En multicámara, `--roi` aplica la misma zona a todas.
 
+### Calibración de umbrales (precision/recall)
+
+Para elegir el umbral con criterio (no a ojo) se mide precision/recall sobre un
+pequeño set de clips etiquetados a mano:
+
+```bash
+python tools/evaluar.py --videos-dir datos/clips --labels datos/labels.csv \
+    --sweep 0.30 0.40 0.45 0.50 0.55 0.60
+```
+
+La pose se calcula una vez por vídeo y el barrido de umbral es rápido. La lógica
+de métricas vive en `src/evaluation.py` (pura, testeable). Cómo conseguir y
+etiquetar los clips (y la nota ética sobre datos personales): ver
+[`DATOS.md`](DATOS.md).
+
 ## Arquitectura
 
 ```mermaid
@@ -77,6 +92,7 @@ shrinkguard/
 │   ├── concealment.py      # heurística + estado temporal  (solo numpy, testeable)
 │   ├── smoothing.py        # suavizado temporal + oclusiones  (solo numpy, testeable)
 │   ├── roi.py              # zonas de interés  (solo numpy, testeable)
+│   ├── evaluation.py       # métricas precision/recall  (pura, testeable)
 │   ├── visualizer.py       # overlays con OpenCV
 │   └── pipeline.py         # bucle principal
 └── tests/
